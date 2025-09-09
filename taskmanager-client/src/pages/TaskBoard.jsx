@@ -1,7 +1,29 @@
 import { useEffect, useState } from 'react';
-import { Grid, Paper, Typography, Box, Chip } from '@mui/material';
+import {
+  Grid,
+  Paper,
+  Typography,
+  Box,
+  Chip,
+  Button,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  IconButton,
+  Menu,
+  MenuItem
+} from '@mui/material';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { getTasks, updateTaskStatus } from '../api/tasks';
+import {
+  getTasks,
+  updateTaskStatus,
+  createTask,
+  updateTask,
+  deleteTask
+} from '../api/tasks';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 
 const statuses = [
   { key: 'Todo', label: 'To Do', color: 'default' },
@@ -23,6 +45,49 @@ const reverseStatusMap = {
 
 export default function TaskBoard() {
   const [tasks, setTasks] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [newTask, setNewTask] = useState({
+    title: '',
+    description: '',
+    status: 0,
+    dueDateUtc: ''
+  });
+
+  const [menuAnchor, setMenuAnchor] = useState(null);
+  const [selectedTask, setSelectedTask] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+
+  const handleMenuOpen = (event, task) => {
+    setMenuAnchor(event.currentTarget);
+    setSelectedTask(task);
+  };
+
+  const handleMenuClose = () => {
+    setMenuAnchor(null);
+  };
+
+  const handleEdit = () => {
+    if (!selectedTask) return;
+    setNewTask({
+      title: selectedTask.title,
+      description: selectedTask.description,
+      status: selectedTask.status,
+      dueDateUtc: selectedTask.dueDateUtc?.split('T')[0] || ''
+    });
+    setIsEditMode(true);
+    setOpen(true);
+    handleMenuClose();
+  };
+
+  const handleDelete = async () => {
+    if (!selectedTask) return;
+    if (window.confirm(`Удалить задачу "${selectedTask.title}"?`)) {
+      await deleteTask(selectedTask.id);
+      const updated = await getTasks();
+      setTasks(updated.data);
+    }
+    handleMenuClose();
+  };
 
   useEffect(() => {
     getTasks().then(res => setTasks(res.data));
@@ -50,11 +115,119 @@ export default function TaskBoard() {
 
   return (
     <Box sx={{ flexGrow: 1 }}>
+      <Button
+        variant="contained"
+        sx={{ mb: 2 }}
+        onClick={() => {
+          setSelectedTask(null);
+          setIsEditMode(false);
+          setNewTask({ title: '', description: '', status: 0, dueDateUtc: '' });
+          setOpen(true);
+        }}
+      >
+        + Add Task
+      </Button>
+
+      <Dialog
+        open={open}
+        onClose={() => setOpen(false)}
+        fullWidth
+        maxWidth="sm"
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
+      >
+        <DialogTitle sx={{ pb: 2 }}>
+          {isEditMode ? 'Edit Task' : 'Create Task'}
+        </DialogTitle>
+        <DialogContent
+          dividers
+          sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 2,
+            pt: 2
+          }}
+        >
+          <TextField
+            label="Title"
+            value={newTask.title}
+            onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+          />
+          <TextField
+            label="Description"
+            multiline
+            rows={3}
+            value={newTask.description}
+            onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+          />
+          <TextField
+            label="Due Date"
+            type="date"
+            InputLabelProps={{ shrink: true }}
+            value={newTask.dueDateUtc}
+            onChange={(e) => setNewTask({ ...newTask, dueDateUtc: e.target.value })}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpen(false)}>Cancel</Button>
+          <Button
+            variant="contained"
+            onClick={async () => {
+              if (isEditMode && selectedTask) {
+                await updateTask(selectedTask.id, {
+                  ...newTask,
+                  dueDateUtc: new Date(newTask.dueDateUtc).toISOString()
+                });
+              } else if (!isEditMode) {
+                await createTask({
+                  ...newTask,
+                  dueDateUtc: new Date(newTask.dueDateUtc).toISOString()
+                });
+              }
+              const updated = await getTasks();
+              setTasks(updated.data);
+              setOpen(false);
+              setNewTask({ title: '', description: '', status: 0, dueDateUtc: '' });
+              setIsEditMode(false);
+              setSelectedTask(null);
+            }}
+          >
+            {isEditMode ? 'Update' : 'Save'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <DragDropContext onDragEnd={onDragEnd}>
-        <Grid container spacing={2}>
+        <Grid
+          container
+          spacing={2}
+          sx={{
+            width: '100%',
+            margin: 0,
+            display: 'flex',
+            justifyContent: 'space-between'
+          }}
+        >
           {statuses.map(status => (
-            <Grid size={{ xs: 12, md: 4 }} key={status.key}>
-              <Paper elevation={3} sx={{ p: 2, minHeight: '80vh', backgroundColor: '#f8fafc' }}>
+            <Grid
+              item
+              key={status.key}
+              xs={12}
+              md
+              sx={{
+                flex: 1,
+                minWidth: 0
+              }}
+            >
+              <Paper
+                elevation={3}
+                sx={{
+                  p: 2,
+                  minHeight: '80vh',
+                  backgroundColor: '#f8fafc'
+                }}
+              >
                 <Typography variant="h6" gutterBottom>
                   {status.label}
                 </Typography>
@@ -75,8 +248,21 @@ export default function TaskBoard() {
                                 {...provided.draggableProps}
                                 {...provided.dragHandleProps}
                                 elevation={1}
-                                sx={{ p: 2, mb: 2, backgroundColor: 'white' }}
+                                sx={{
+                                  p: 1.5,
+                                  mb: 1.5,
+                                  backgroundColor: 'white',
+                                  position: 'relative'
+                                }}
                               >
+                                <IconButton
+                                  size="small"
+                                  sx={{ position: 'absolute', top: 4, right: 4 }}
+                                  onClick={(e) => handleMenuOpen(e, task)}
+                                >
+                                  <MoreVertIcon fontSize="small" />
+                                </IconButton>
+
                                 <Typography variant="subtitle1" fontWeight="bold">
                                   {task.title}
                                 </Typography>
@@ -102,6 +288,15 @@ export default function TaskBoard() {
           ))}
         </Grid>
       </DragDropContext>
+
+      <Menu
+        anchorEl={menuAnchor}
+        open={Boolean(menuAnchor)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={handleEdit}>Редактировать</MenuItem>
+        <MenuItem onClick={handleDelete}>Удалить</MenuItem>
+      </Menu>
     </Box>
   );
 }

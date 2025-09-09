@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Welcome from './components/Welcome';
 import TaskBoard from './pages/TaskBoard';
+import About from './pages/About';
 
 export default function App() {
   return (
@@ -17,7 +18,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<Welcome />} />
             <Route path="/board" element={<TaskBoard />} />
-            <Route path="/about" element={<div>About page</div>} />
+            <Route path="/about" element={<About />} />
           </Routes>
         </Box>
       </Box>

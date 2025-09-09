@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'https://localhost:5001/api/tasks';
+const API_URL = 'http://localhost:5000/api/tasks';
 
 export const getTasks = async () => {
   const res = await axios.get(API_URL);
@@ -14,4 +14,14 @@ export const createTask = async (task) => {
 
 export const updateTaskStatus = async (id, status) => {
   await axios.patch(`${API_URL}/${id}/status`, { status });
+};
+
+export const updateTask = async (id, task) => {
+  const res = await axios.put(`${API_URL}/${id}`, task);
+  return res.data;
+};
+
+export const deleteTask = async (id) => {
+  const res = await axios.delete(`${API_URL}/${id}`);
+  return res.data;
 };
