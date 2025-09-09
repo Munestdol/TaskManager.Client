@@ -13,6 +13,8 @@ import {
   TextField,
   IconButton,
   Menu,
+  Snackbar, 
+  Alert,
   MenuItem
 } from '@mui/material';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
@@ -52,7 +54,7 @@ export default function TaskBoard() {
     status: 0,
     dueDateUtc: ''
   });
-
+  const [snackbar, setSnackbar] = useState({ open: false, message: '', severity: 'info' });
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -81,11 +83,19 @@ export default function TaskBoard() {
 
   const handleDelete = async () => {
     if (!selectedTask) return;
-    if (window.confirm(`Удалить задачу "${selectedTask.title}"?`)) {
+
+    setSnackbar({ open: true, message: `Deleting "${selectedTask.title}"...`, severity: 'info' });
+
+    try {
       await deleteTask(selectedTask.id);
       const updated = await getTasks();
       setTasks(updated.data);
+
+      setSnackbar({ open: true, message: `Task "${selectedTask.title}" deleted`, severity: 'success' });
+    } catch (error) {
+      setSnackbar({ open: true, message: `Error deleting task: ${error.message}`, severity: 'error' });
     }
+
     handleMenuClose();
   };
 
@@ -297,6 +307,21 @@ export default function TaskBoard() {
         <MenuItem onClick={handleEdit}>Edit</MenuItem>
         <MenuItem onClick={handleDelete}>Delete</MenuItem>
       </Menu>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
