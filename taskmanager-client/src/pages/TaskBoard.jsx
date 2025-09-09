@@ -109,7 +109,7 @@ export default function TaskBoard() {
     try {
       await updateTaskStatus(draggableId, reverseStatusMap[destination.droppableId]);
     } catch (err) {
-      console.error('Ошибка обновления статуса', err);
+      console.error('Error during update status', err);
     }
   };
 
@@ -294,8 +294,8 @@ export default function TaskBoard() {
         open={Boolean(menuAnchor)}
         onClose={handleMenuClose}
       >
-        <MenuItem onClick={handleEdit}>Редактировать</MenuItem>
-        <MenuItem onClick={handleDelete}>Удалить</MenuItem>
+        <MenuItem onClick={handleEdit}>Edit</MenuItem>
+        <MenuItem onClick={handleDelete}>Delete</MenuItem>
       </Menu>
     </Box>
   );
